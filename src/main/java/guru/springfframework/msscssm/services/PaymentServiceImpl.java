@@ -25,10 +25,8 @@ public class PaymentServiceImpl implements PaymentService {
 
 	@Override
 	public Payment newPayment(Payment payment) {
-		payment
-				.setState(PaymentState.NEW);
-		return paymentRepository
-				.save(payment);
+		payment.setState(PaymentState.NEW);
+		return paymentRepository.save(payment);
 	}
 
 	@Override
@@ -62,38 +60,26 @@ public class PaymentServiceImpl implements PaymentService {
 	}
 
 	private void sendEvent(Long paymentId, StateMachine<PaymentState, PaymentEvent> sm, PaymentEvent event) {
-		Message<PaymentEvent> msg = MessageBuilder
-				.withPayload(event)
-				.setHeader(PAYMENT_ID_HEADER, paymentId)
-				.build();
+		Message<PaymentEvent> msg = MessageBuilder.withPayload(event).setHeader(PAYMENT_ID_HEADER, paymentId).build();
 
-		sm
-				.sendEvent(msg);
+		sm.sendEvent(msg);
 	}
 
 	private StateMachine<PaymentState, PaymentEvent> build(Long paymentId) {
-		Payment payment = paymentRepository
-				.findById(paymentId)
-				.orElseThrow(() -> new EntityNotFoundException("Payment data not found."));
+		Payment payment = paymentRepository.findById(paymentId).orElseThrow(
+				() -> new EntityNotFoundException("Payment data not found."));
 
-		StateMachine<PaymentState, PaymentEvent> sm = stateMachineFactory
-				.getStateMachine(Long
-						.toString(payment
-								.getId()));
+		StateMachine<PaymentState, PaymentEvent> sm = stateMachineFactory.getStateMachine(
+				Long.toString(payment.getId()));
 
-		sm
-				.stop();
+		sm.stop();
 
-		sm
-				.getStateMachineAccessor()
-				.doWithAllRegions(sma -> {
-					sma
-							.resetStateMachine(new DefaultStateMachineContext<PaymentState, PaymentEvent>(payment
-									.getState(), null, null, null));
-				});
+		sm.getStateMachineAccessor().doWithAllRegions(sma -> {
+			sma.resetStateMachine(
+					new DefaultStateMachineContext<PaymentState, PaymentEvent>(payment.getState(), null, null, null));
+		});
 
-		sm
-				.start();
+		sm.start();
 
 		return sm;
 	}
